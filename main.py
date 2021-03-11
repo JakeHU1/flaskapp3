@@ -62,12 +62,6 @@ def logout():
     else:   
         return render_template("index.html", message="You're not logged in")
     
-
-
-# Run the app on port 5000 on all interfaces, accepting only HTTPS connections
-if __name__ == '__main__':
-    app.run(debug=True, ssl_context='adhoc', host='0.0.0.0', port=5000)
-
 # DNS CRUD Routes: 
 # append: add new a record to zone file
 # delete: delete an a record from zone file
@@ -85,3 +79,18 @@ def append(ip_adres=None, hostname=None):
     zone.to_file(zonefile)
     manager.RestartUnit('bind9.service', 'fail') # restart bind for changes to take effect
     return {"message": "new A-record with ip {} and hostname {} inserted".format(ip_adres, hostname)}
+
+@app.route('/dns/delete/<hostname>')
+def delete(hostname=None):
+    systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
+    manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
+    zonefile = '/etc/bind/db.example.com'
+    zone = dns.zone.from_file(zonefile, os.path.basename(zonefile))
+    zone.delete_rdataset(hostname, dns.rdatatype.A)
+    manager.RestartUnit('bind9.service', 'fail') # restart bind for changes to take effect
+    zone.to_file(zonefile)
+    return {"message": "A-record removed hostname {}".format(hostname)}
+
+# Run the app on port 5000 on all interfaces, accepting only HTTPS connections
+if __name__ == '__main__':
+    app.run(debug=True, ssl_context='adhoc', host='0.0.0.0', port=5000)
