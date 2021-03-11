@@ -5,6 +5,14 @@ from authomatic import Authomatic
 import authomatic
 import logging
 
+import os
+import dns.rdataset
+import dns.rdtypes.IN.A
+import dns.zone
+import dbus
+sysbus = dbus.SystemBus()
+
+
 from config import CONFIG
 
 # Instantiate Authomatic.
@@ -59,3 +67,21 @@ def logout():
 # Run the app on port 5000 on all interfaces, accepting only HTTPS connections
 if __name__ == '__main__':
     app.run(debug=True, ssl_context='adhoc', host='0.0.0.0', port=5000)
+
+# DNS CRUD Routes: 
+# append: add new a record to zone file
+# delete: delete an a record from zone file
+# replace: delete a record from zone file and replace it with a new one
+
+@app.route('/dns/append/<ip_adres>/<hostname>')
+def append(ip_adres=None, hostname=None):
+    systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
+    manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
+    zonefile = '/etc/named/db.example.com'
+    zone = dns.zone.from_file(zonefile, os.path.basename(zonefile))
+    rdataset = zone.find_rdataset(hostname, dns.rdatatype.A, create=True)
+    rdata = dns.rdtypes.IN.A.A(dns.rdataclass.IN, dns.rdatatype.A, ip_adres)
+    rdataset.add(rdata, 86400)
+    zone.to_file(zonefile)
+    manager.RestartUnit('bind9.service', 'fail') # restart bind for changes to take effect
+    return {"message": "new A-record with ip {} and hostname {} inserted".format(ip_adres, hostname)}
