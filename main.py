@@ -70,7 +70,7 @@ def logout():
 @app.route('/dns/append/<ip_adres>/<hostname>')
 def append(ip_adres=None, hostname=None):
     systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-    managetr = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
+    manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
     zonefile = '/etc/bind/db.example.com'
     zone = dns.zone.from_file(zonefile, os.path.basename(zonefile))
     rdataset = zone.find_rdataset(hostname, dns.rdatatype.A, create=True)
