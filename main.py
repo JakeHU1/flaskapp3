@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, make_response, session
+from flask import Flask, render_template, request, make_response, session, url_for
 from flask_pymongo import PyMongo
 from authomatic.adapters import WerkzeugAdapter
 from authomatic import Authomatic
@@ -10,8 +10,8 @@ import dns.rdataset
 import dns.rdtypes.IN.A
 import dns.zone
 import dbus
-sysbus = dbus.SystemBus()
 
+sysbus = dbus.SystemBus()
 
 from config import CONFIG
 
@@ -19,22 +19,28 @@ from config import CONFIG
 authomatic = Authomatic(CONFIG, 'your secret string', report_errors=False)
 app = Flask(__name__, template_folder='.')
 app.secret_key = "very secret key"
-app.config['MONGO_URI'] = "mongodb+srv://user3:ssANd6vkHlfYU4ze@cluster0.fshnt.mongodb.net/flaskapp?retryWrites=true&w=majority"
+app.config[
+    'MONGO_URI'] = "mongodb+srv://user3:ssANd6vkHlfYU4ze@cluster0.fshnt.mongodb.net/flaskapp?retryWrites=true&w=majority"
 mongo = PyMongo(app)
+
+
 @app.route('/')
 def index():
     if session:
         return render_template('dns.html')
     return render_template('index.html', message="Please login")
 
+
 @app.route('/login/<provider_name>/', methods=['GET', 'POST'])
 def login(provider_name):
     # We need response object for the WerkzeugAdapter.
     response = make_response()
     # Log the user in, pass it the adapter and the provider name.
-    result = authomatic.login(WerkzeugAdapter(request, response), provider_name,
-    session=session, session_saver=lambda: app.save_session(session, response)
-    )
+    result = authomatic.login(
+        WerkzeugAdapter(request, response),
+        provider_name,
+        session=session,
+        session_saver=lambda: app.save_session(session, response))
     # If there is no LoginResult object, the login procedure is still pending.
     if result:
         if result.user:
@@ -46,30 +52,49 @@ def login(provider_name):
         # The rest happens inside the template.
         if mongo.db.users.find_one({'email': session['email']}):
             result = mongo.db.users.find_one({'email': session['email']})
-            return render_template("dns.html", user=session['username'], fqdns=result['fqdns'])
+            return render_template("dns.html",
+                                   user=session['username'],
+                                   fqdns=result['fqdns'])
         else:
-            mongo.db.users.insert_one({"username": session['username'], "email": session['email'], "token": session['token']})
+            mongo.db.users.insert_one({
+                "username": session['username'],
+                "email": session['email'],
+                "token": session['token']
+            })
             return render_template("dns.html", user=session['username'])
 
     # Don't forget to return the response.
     return response
+
 
 @app.route('/logout')
 def logout():
     if session:
         session.clear()
         return render_template("index.html", message="Logged out succesfully")
-    else:   
+    else:
         return render_template("index.html", message="You're not logged in")
-    
-# DNS CRUD Routes: 
+
+
+@app.route('/submit_dns', methods=['POST'])
+def submit_dns():
+    req = request.form['new_record']
+    filter = { 'username': session['username'] }
+    update = { "$push": {"fqdns": req}}
+    mongo.db.users.update_one(filter, update)
+    return render_template("dns.html", user=session["username"], message="new A record {} added".format(req), fqdns=mongo.db.users.find_one({'username': session['username']},{'_id': 0, 'fqdns': 1 }))
+
+
+# DNS CRUD Routes:
 # append: add new a record to zone file
 # delete: delete an a record from zone file
 # replace: delete a record from zone file and replace it with a new one
 
+
 @app.route('/dns/append/<ip_adres>/<hostname>')
 def append(ip_adres=None, hostname=None):
-    systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
+    systemd1 = sysbus.get_object('org.freedesktop.systemd1',
+                                 '/org/freedesktop/systemd1')
     manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
     zonefile = '/etc/bind/db.example.com'
     zone = dns.zone.from_file(zonefile, os.path.basename(zonefile))
@@ -77,19 +102,28 @@ def append(ip_adres=None, hostname=None):
     rdata = dns.rdtypes.IN.A.A(dns.rdataclass.IN, dns.rdatatype.A, ip_adres)
     rdataset.add(rdata, 86400)
     zone.to_file(zonefile)
-    manager.RestartUnit('bind9.service', 'fail') # restart bind for changes to take effect
-    return {"message": "new A-record with ip {} and hostname {} inserted".format(ip_adres, hostname)}
+    manager.RestartUnit('bind9.service',
+                        'fail')  # restart bind for changes to take effect
+    return {
+        "message":
+        "new A-record with ip {} and hostname {} inserted".format(
+            ip_adres, hostname)
+    }
+
 
 @app.route('/dns/delete/<hostname>')
 def delete(hostname=None):
-    systemd1 = sysbus.get_object('org.freedesktop.systemd1', '/org/freedesktop/systemd1')
+    systemd1 = sysbus.get_object('org.freedesktop.systemd1',
+                                 '/org/freedesktop/systemd1')
     manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
     zonefile = '/etc/bind/db.example.com'
     zone = dns.zone.from_file(zonefile, os.path.basename(zonefile))
     zone.delete_rdataset(hostname, dns.rdatatype.A)
-    manager.RestartUnit('bind9.service', 'fail') # restart bind for changes to take effect
+    manager.RestartUnit('bind9.service',
+                        'fail')  # restart bind for changes to take effect
     zone.to_file(zonefile)
     return {"message": "A-record removed hostname {}".format(hostname)}
+
 
 # Run the app on port 5000 on all interfaces, accepting only HTTPS connections
 if __name__ == '__main__':
