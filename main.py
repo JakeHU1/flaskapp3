@@ -1,3 +1,4 @@
+from config import CONFIG
 from flask import Flask, render_template, request, make_response, session, url_for
 from flask_pymongo import PyMongo
 from authomatic.adapters import WerkzeugAdapter
