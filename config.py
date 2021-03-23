@@ -2,7 +2,7 @@ import authomatic
 from authomatic.providers import oauth2, oauth1
 
 CONFIG = {
-    'twitter': { # Your internal provider name
+    'twitter': {  # Your internal provider name
 
         # Provider class
         'class_': oauth1.Twitter,
@@ -12,7 +12,7 @@ CONFIG = {
         'consumer_secret': '########################',
     },
 
-   'facebook': {
+    'facebook': {
 
         'class_': oauth2.Facebook,
 
@@ -59,7 +59,13 @@ CONFIG = {
         '_apis': {
             'List your connections': ('GET', 'https://api.linkedin.com/v1/people/~/connections'),
         },
-    }
+    },
+    'reddit': {
+        'class_': oauth2.Reddit,
+        'consumer_key': 'tphfimtM67gAcQ',
+        'consumer_secret': 'HVjxG3rUy3fJaIcsXn4zGuXf9u_Q4A',
+        'id': authomatic.provider_id(),
+        'scope': oauth2.Reddit.user_info_scope,
+        'access_headers': {'User-Agent': "flaskapp"},
+    },
 }
-
-		

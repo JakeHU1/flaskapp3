@@ -1,0 +1,42 @@
+{% extends "base.html" %} {% block body %} {% if message %}
+<h3>{{ message }}</h3>
+{% endif %}
+
+<!--Links to the login handler-->
+<div class="row">
+  <div class="col-md-3">
+    <a
+      class="btn btn-outline-dark"
+      href="login/google"
+      role="button"
+      style="text-transform: none"
+    >
+      <img
+        width="20px"
+        style="margin-bottom: 3px; margin-right: 5px"
+        alt="Google sign-in"
+        src="https://upload.wikimedia.org/wikipedia/commons/thumb/5/53/Google_%22G%22_Logo.svg/512px-Google_%22G%22_Logo.svg.png"
+      />
+      Login with Google
+    </a>
+  </div>
+</div>
+<div class="row">
+  <div class="col-md-3">
+    <a
+      class="btn btn-outline-dark"
+      href="login/reddit"
+      role="button"
+      style="text-transform: none"
+    >
+      <img
+        width="20px"
+        style="margin-bottom: 3px; margin-right: 5px"
+        alt="Reddit sign-in"
+        src="https://miro.medium.com/max/720/0*yQHjxzmY_oPzIS-f.png"
+      />
+      Login with Reddit
+    </a>
+  </div>
+</div>
+{% endblock %}
