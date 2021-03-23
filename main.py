@@ -1,12 +1,8 @@
-<<<<<<< HEAD
-from config import CONFIG
-=======
 from flask import Flask, render_template, request, make_response, session, url_for
 from flask_pymongo import PyMongo
 from authomatic.adapters import WerkzeugAdapter
 from authomatic import Authomatic
 import authomatic
->>>>>>> 3d18d3aef64928b9590717c24c2237250d798d4c
 import logging
 import os
 import json
@@ -22,18 +18,6 @@ from flask_pymongo import PyMongo
 
 sysbus = dbus.SystemBus()
 
-<<<<<<< HEAD
-=======
-import os
-import dns.rdataset
-import dns.rdtypes.IN.A
-import dns.zone
-import dbus
-
-sysbus = dbus.SystemBus()
-
-from config import CONFIG
->>>>>>> 3d18d3aef64928b9590717c24c2237250d798d4c
 
 # Instantiate Authomatic.
 authomatic = Authomatic(CONFIG, 'your secret string', report_errors=False)
@@ -53,27 +37,16 @@ def index():
     return render_template('index.html', message="Please login")
 
 
-<<<<<<< HEAD
 # login / logout routes
-=======
->>>>>>> 3d18d3aef64928b9590717c24c2237250d798d4c
 @app.route('/login/<provider_name>/', methods=['GET', 'POST'])
 def login(provider_name):
     # We need response object for the WerkzeugAdapter.
     response = make_response()
     # Log the user in, pass it the adapter and the provider name.
-<<<<<<< HEAD
     result = authomatic.login(WerkzeugAdapter(request, response), provider_name,
                               session=session, session_saver=lambda: app.save_session(
                                   session, response)
                               )
-=======
-    result = authomatic.login(
-        WerkzeugAdapter(request, response),
-        provider_name,
-        session=session,
-        session_saver=lambda: app.save_session(session, response))
->>>>>>> 3d18d3aef64928b9590717c24c2237250d798d4c
     # If there is no LoginResult object, the login procedure is still pending.
     if result:
         if result.user:
@@ -91,24 +64,11 @@ def login(provider_name):
         # The rest happens inside the template.
         if mongo.db.users.find_one({'email': session['email']}):
             result = mongo.db.users.find_one({'email': session['email']})
-<<<<<<< HEAD
             return render_template("dns.html", user=session['username'], message="Welcome back, {}".format(session["username"]), fqdns=result['fqdns'], UUID=session['token'])
         else:
             mongo.db.users.insert_one(
                 {"username": session['username'], "email": session['email'], "token": session['token']})
             return render_template("dns.html", message="Welcome back, {}".format(session["username"]), user=session['username'], UUID=session['token'])
-=======
-            return render_template("dns.html",
-                                   user=session['username'],
-                                   fqdns=result['fqdns'])
-        else:
-            mongo.db.users.insert_one({
-                "username": session['username'],
-                "email": session['email'],
-                "token": session['token']
-            })
-            return render_template("dns.html", user=session['username'])
->>>>>>> 3d18d3aef64928b9590717c24c2237250d798d4c
 
     # Don't forget to return the response.
     return response
@@ -123,7 +83,6 @@ def logout():
         return render_template("index.html", message="You're not logged in")
 
 
-<<<<<<< HEAD
 # new record, delete record and edit record routes
 @app.route('/new_record', methods=['POST'])
 def new_record():
@@ -219,55 +178,6 @@ def delete(hostname=None, UUID=None):
         return {"message": "A-record removed hostname {}".format(hostname)}
     else:
         return {"message": "not authorized"}
-=======
-@app.route('/submit_dns', methods=['POST'])
-def submit_dns():
-    req = request.form['new_record']
-    filter = { 'username': session['username'] }
-    update = { "$push": {"fqdns": req}}
-    mongo.db.users.update_one(filter, update)
-    return render_template("dns.html", user=session["username"], message="new A record {} added".format(req), fqdns=mongo.db.users.find_one({'username': session['username']},{'_id': 0, 'fqdns': 1 }))
-
-
-# DNS CRUD Routes:
-# append: add new a record to zone file
-# delete: delete an a record from zone file
-# replace: delete a record from zone file and replace it with a new one
-
-
-@app.route('/dns/append/<ip_adres>/<hostname>')
-def append(ip_adres=None, hostname=None):
-    systemd1 = sysbus.get_object('org.freedesktop.systemd1',
-                                 '/org/freedesktop/systemd1')
-    manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
-    zonefile = '/etc/bind/db.example.com'
-    zone = dns.zone.from_file(zonefile, os.path.basename(zonefile))
-    rdataset = zone.find_rdataset(hostname, dns.rdatatype.A, create=True)
-    rdata = dns.rdtypes.IN.A.A(dns.rdataclass.IN, dns.rdatatype.A, ip_adres)
-    rdataset.add(rdata, 86400)
-    zone.to_file(zonefile)
-    manager.RestartUnit('bind9.service',
-                        'fail')  # restart bind for changes to take effect
-    return {
-        "message":
-        "new A-record with ip {} and hostname {} inserted".format(
-            ip_adres, hostname)
-    }
-
-
-@app.route('/dns/delete/<hostname>')
-def delete(hostname=None):
-    systemd1 = sysbus.get_object('org.freedesktop.systemd1',
-                                 '/org/freedesktop/systemd1')
-    manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
-    zonefile = '/etc/bind/db.example.com'
-    zone = dns.zone.from_file(zonefile, os.path.basename(zonefile))
-    zone.delete_rdataset(hostname, dns.rdatatype.A)
-    manager.RestartUnit('bind9.service',
-                        'fail')  # restart bind for changes to take effect
-    zone.to_file(zonefile)
-    return {"message": "A-record removed hostname {}".format(hostname)}
->>>>>>> 3d18d3aef64928b9590717c24c2237250d798d4c
 
 
 # Run the app on port 5000 on all interfaces, accepting only HTTPS connections
