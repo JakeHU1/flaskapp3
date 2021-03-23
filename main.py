@@ -16,8 +16,7 @@ from authomatic import Authomatic
 from authomatic.adapters import WerkzeugAdapter
 from flask import Flask, make_response, render_template, request, session, url_for, flash, redirect
 from flask_pymongo import PyMongo
-
-sysbus = dbus.SystemBus()
+import subprocess
 
 
 # Instantiate Authomatic.
@@ -143,9 +142,6 @@ def edit_record():
 @ app.route('/dns/append/<ip_adres>/<hostname>/<UUID>')
 def append(ip_adres=None, hostname=None, UUID=None):
     if mongo.db.users.find_one({'token': UUID}):
-        systemd1 = sysbus.get_object(
-            'org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-        manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
         zonefile = '/etc/bind/db.example.com'
         zone = dns.zone.from_file(zonefile, os.path.basename(zonefile))
         rdataset = zone.find_rdataset(hostname, dns.rdatatype.A, create=True)
@@ -153,7 +149,7 @@ def append(ip_adres=None, hostname=None, UUID=None):
             dns.rdataclass.IN, dns.rdatatype.A, ip_adres)
         rdataset.add(rdata, 86400)
         zone.to_file(zonefile)
-        manager.RestartUnit('bind9.service', 'fail')
+        subprocess.call(["sudo", "rndc", "reload"])
         filter = {'username': session['username']}
         update = {"$push": {"fqdns": hostname}}
         mongo.db.users.update_one(filter, update)
@@ -165,14 +161,11 @@ def append(ip_adres=None, hostname=None, UUID=None):
 @ app.route('/dns/delete/<hostname>/<UUID>')
 def delete(hostname=None, UUID=None):
     if mongo.db.users.find_one({'token': UUID}):
-        systemd1 = sysbus.get_object(
-            'org.freedesktop.systemd1', '/org/freedesktop/systemd1')
-        manager = dbus.Interface(systemd1, 'org.freedesktop.systemd1.Manager')
         zonefile = '/etc/bind/db.example.com'
         zone = dns.zone.from_file(zonefile, os.path.basename(zonefile))
         zone.delete_rdataset(hostname, dns.rdatatype.A)
         # restart bind for changes to take effect
-        manager.RestartUnit('bind9.service', 'fail')
+        subprocess.call(["sudo", "rndc", "reload"])
         zone.to_file(zonefile)
         mongo.db.users.update({'username': session['username']}, {
             '$pull': {'fqdns': hostname}})
